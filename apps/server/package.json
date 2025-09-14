@@ -6,9 +6,10 @@
   "main": "dist/index.js",
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "latest"
+    "@types/node": "^22.15.3"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -18,9 +19,11 @@
     "start": "bun dist/index.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
+    "uuid": "^13.0.0",
     "zod": "^4.1.7"
   }
 }

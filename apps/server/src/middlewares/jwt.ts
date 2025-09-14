@@ -12,7 +12,10 @@ export const verifyToken = (
   jwt.verify(token, Bun.env.JWT_SECRET as string, (err, decoded) => {
     if (err || !decoded)
       return res.status(401).json({ message: "Unauthorized" });
-    (req as any).user = decoded;
+    req.user = {
+      id: (decoded as any).id,
+      email: (decoded as any).email,
+    };
     next();
   });
 };
