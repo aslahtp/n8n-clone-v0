@@ -44,8 +44,8 @@ export const createCredential = async (credential: ICredential) => {
   }
 };
 
-export const getCredentialById = async (id: string) => {
-  const credential = await Credential.findById(id);
+export const getCredentialByUserId = async (userId: string) => {
+  const credential = await Credential.find({ userId });
   return credential;
 };
 

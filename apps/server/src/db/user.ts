@@ -1,8 +1,6 @@
 import mongoose from "mongoose";
 import type { IUser } from "../types/user";
 
-mongoose.connect(Bun.env.MONGO_URI as string);
-
 const userSchema = new mongoose.Schema<IUser>({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },

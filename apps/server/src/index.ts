@@ -2,8 +2,10 @@ import express from "express";
 import { authRoutes } from "./routes/auth";
 import cors from "cors";
 import credentialsRoutes from "./routes/credentials";
+import { connectDB } from "./db/connection";
 
 const app = express();
+await connectDB();
 
 app.get("/", (req, res) => {
   res.send("Hello, world!");
