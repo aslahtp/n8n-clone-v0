@@ -1,40 +1,86 @@
 import { Router } from "express";
 import { verifyToken } from "../middlewares/jwt";
-import { createWorkflow, getWorkflowsByUserId, getWorkflowById, updateWorkflow, deleteWorkflowById, type IWorkflow } from "../db/workflow";
+import { Nodes, Workflows } from "../db/model";
+import { executeWorkflow } from "../services/executionService";
 
-const workflowsRoutes = Router();
+const router: Router = Router();
 
-workflowsRoutes.post("/", verifyToken, async (req, res) => {
-    const { title, enabled, nodes, connections } = req.body;
-    if (!req.user?.id) return res.status(401).json({ message: "User not authenticated" });
-
-    const workflow = await createWorkflow({ title, enabled, nodes, connections, userId: req.user.id } as IWorkflow);
-    res.status(200).json({ message: "Workflow created successfully", workflow });
+router.post('/', verifyToken, async (req, res) => {
+    try {
+        const workflow = await Workflows.create({ ...req.body, userId: (req as any).user?.id || (req as any).userId });
+        console.log("workflow created ");
+        res.json({ message: "workflow created", id: workflow.id });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: "error creating workflow" });
+    }
 });
 
-workflowsRoutes.get("/", verifyToken, async (req, res) => {
-    if (!req.user?.id) return res.status(401).json({ message: "User not authenticated" });
-    const workflows = await getWorkflowsByUserId(req.user.id);
-    res.status(200).json({ message: "Workflows fetched successfully", workflows });
+router.get('/', verifyToken, async (req, res) => {
+    try {
+        const userId = (req as any).user?.id || (req as any).userId;
+        const workflows = await Workflows.find({ userId });
+        res.json({ workflows });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "error getting workflow" });
+    }
 });
 
-workflowsRoutes.get("/:id", verifyToken, async (req, res) => {
-    if (!req.user?.id) return res.status(401).json({ message: "User not authenticated" });
-    const workflow = await getWorkflowById(req.params.id as string);
-    res.status(200).json({ message: "Workflow fetched successfully", workflow });
+router.get('/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const workflow = await Workflows.findOne({ id: id });
+        if (!workflow) return res.status(404).json({ message: "workflow not found" });
+        res.json(workflow);
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "error getting workflow" });
+    }
 });
 
-workflowsRoutes.put("/:id", verifyToken, async (req, res) => {
-    if (!req.user?.id) return res.status(401).json({ message: "User not authenticated" });
-    const workflow = await updateWorkflow(req.params.id as string, req.body as IWorkflow);
-    res.status(200).json({ message: "Workflow updated successfully", workflow });
+router.put('/:id', verifyToken, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const workflow = await Workflows.replaceOne({ id: id }, req.body);
+        res.json(workflow);
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "error updating workflow" });
+    }
 });
 
-workflowsRoutes.delete("/:id", verifyToken, async (req, res) => {
-    if (!req.user?.id) return res.status(401).json({ message: "User not authenticated" });
-    const workflow = await deleteWorkflowById(req.params.id as string);
-    res.status(200).json({ message: "Workflow deleted successfully", workflow });
+router.post('/node', verifyToken, async (req, res) => {
+    try {
+        await Nodes.create(req.body);
+        res.json({ message: "node created successfully" });
+    } catch (e) {
+        console.error("error creating node ", e);
+        res.status(500).json({ message: "error creating node" });
+    }
 });
 
+router.get('/node/get', verifyToken, async (req, res) => {
+    try {
+        const nodes = await Nodes.find();
+        res.json({ nodes });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "error getting nodes" });
+    }
+});
 
-export default workflowsRoutes;
+router.post('/execute', verifyToken, async (req, res) => {
+    const { id } = req.body;
+    try {
+        const workflow = await Workflows.findOne({ id: id });
+        if (!workflow) return res.status(404).json({ message: "workflow not found" });
+        await executeWorkflow(workflow);
+        res.json({ message: "workflow executed" });
+    } catch (e) {
+        console.log(e);
+        res.status(500).json({ message: "error executing workflow" });
+    }
+});
+
+export default router;

@@ -1,5 +1,6 @@
 import mongoose, { Document, Schema } from "mongoose";
 import { v4 as uuidv4 } from "uuid";
+import { Workflows } from "./model";
 
 export interface IConnection {
     source:{
@@ -19,6 +20,7 @@ export interface INode {
     type: string;
     code: string;
     position: [number,number];
+    icon?: string;
     parameters? : Record<string,any>;
     credentials? : Record<string,any>;
 }
@@ -49,13 +51,14 @@ export const NodeSchema = new Schema<INode>({
     name: String,
     type: String,
     code: String,
+    icon: String,
     position: {type:[Number],required:true},
     parameters: Schema.Types.Mixed,
     credentials: Schema.Types.Mixed
 })
 
 export const WorkflowSchema = new Schema<IWorkflow>({
-    id:{type:String,unique:true,required:true,default: () => uuidv4()},
+    id:{type:String,unique:true,required:true,default: () => `wf_${uuidv4().slice(0,8)}`},
     userId:{type:String,required:true},
     title:String,
     enabled:Boolean,
@@ -64,28 +67,26 @@ export const WorkflowSchema = new Schema<IWorkflow>({
 })
 
 export const createWorkflow = async (workflow: IWorkflow) => {
-    const newWorkflow = await Workflow.create(workflow);
+    const newWorkflow = await Workflows.create(workflow);
     return newWorkflow;
 }
 
 export const getWorkflowsByUserId = async (userId: string) => {
-    const workflows = await Workflow.find({ userId });
+    const workflows = await Workflows.find({ userId });
     return workflows;
 }
 
 export const getWorkflowById = async (id: string) => {
-    const workflow = await Workflow.findById(id);
+    const workflow = await Workflows.findOne({ id });
     return workflow;
 }
 
 export const updateWorkflow = async (id: string, workflow: IWorkflow) => {
-    const updatedWorkflow = await Workflow.findByIdAndUpdate(id, workflow, { new: true });
+    const updatedWorkflow = await Workflows.findOneAndUpdate({ id }, workflow, { new: true });
     return updatedWorkflow;
 }
 
 export const deleteWorkflowById = async (id: string) => {
-    const deletedWorkflow = await Workflow.findByIdAndDelete(id);
+    const deletedWorkflow = await Workflows.findOneAndDelete({ id });
     return deletedWorkflow;
 }
-
-export const Workflow = mongoose.model<IWorkflow>("Workflow", WorkflowSchema);

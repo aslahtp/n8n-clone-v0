@@ -1,37 +1,47 @@
 import { Router } from "express";
-import { generateToken } from "../utils/jwt";
-import { userSigninSchemaZod, userSignupSchemaZod } from "../types/types";
-import { createUser, getUserByEmail } from "../db/user";
+import { v4 as uuidV4 } from "uuid";
+import { Users } from "../db/model";
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-const authRoutes = Router();
+const router: Router = Router();
+dotenv.config();
 
-authRoutes.post("/signin", async (req, res) => {
-  const result = userSigninSchemaZod.safeParse(req.body);
-  if (!result.success)
-    return res.status(401).json({ message: "Invalid Schema" });
-  const { email, password } = result.data;
-  if (!email || !password)
-    return res.status(401).json({ message: "Invalid credentials" });
-  const user = await getUserByEmail(email);
-  if (!user) return res.status(401).json({ message: "Invalid credentials" });
-  if (user.password !== password)
-    return res.status(401).json({ message: "Invalid credentials" });
-  const token = generateToken(email, user._id.toString());
-  res.status(200).json({ message: "Signin successful", token });
+const JWT_SECRET = process.env.JWT_SECRET || Bun.env.JWT_SECRET as string;
+console.log('JWT_SECRET loaded:', JWT_SECRET ? 'Yes' : 'No');
+
+router.post("/signup", async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        const userId = uuidV4();
+
+        const user = await Users.findOne({ username });
+
+        if (user) return res.status(401).json({ message: "user already exists" });
+
+        await Users.create({ username, userId, password });
+
+        console.log("user created");
+
+        res.json({ userId });
+    } catch (e) {
+        res.status(500).json({ detail: e });
+    }
 });
 
-authRoutes.post("/signup", async (req, res) => {
-  const result = userSignupSchemaZod.safeParse(req.body);
-  if (!result.success)
-    return res.status(401).json({ message: "Invalid Schema" });
-  const { email, password, name } = result.data;
-  if (!email || !password || !name)
-    return res.status(401).json({ message: "Invalid credentials" });
-  const user = await getUserByEmail(email);
-  if (user) return res.status(401).json({ message: "User already exists" });
-  const newUser = await createUser({ email, password, name });
-  const token = generateToken(email, newUser._id.toString());
-  res.status(200).json({ message: "Signup successful", token });
+router.post('/signin', async (req, res) => {
+    const { username, password } = req.body;
+
+    const user = await Users.findOne({ username });
+
+    if (!user) return res.status(401).json({ message: "user not found" });
+
+    if (user.password !== password) return res.status(401).json({ message: "Incorrect credentials" });
+
+    const token = jwt.sign({ userId: user.userId }, JWT_SECRET);
+
+    res.json({ token });
 });
 
-export { authRoutes };
+export default router;
